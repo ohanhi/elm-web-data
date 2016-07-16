@@ -41,7 +41,7 @@ Commands are usually what we need, but sometimes we need tasks for more fine-gra
 ```elm
 create : Cat -> Task Never (WebData Cat)
 create catData =
-    WebData.Http.postTask ReceiveCatData catDecoder catData "/api/cats/"
+    WebData.Http.postTask ReceiveCatData catDecoder (encode catData) "/api/cats/"
 ```
 
 There is a function to make a command or a task for each of the HTTP verbs.
