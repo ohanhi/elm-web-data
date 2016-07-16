@@ -1,0 +1,19 @@
+{
+    "version": "1.0.0",
+    "summary": "helpful summary of your project, less than 80 characters",
+    "repository": "https://github.com/ohanhi/elm-web-data.git",
+    "license": "BSD3",
+    "source-directories": [
+        "src"
+    ],
+    "exposed-modules": [
+        "WebData",
+        "WebData.Http"
+    ],
+    "dependencies": {
+        "elm-lang/core": "4.0.2 <= v < 5.0.0",
+        "evancz/elm-http": "3.0.1 <= v < 4.0.0",
+        "lukewestby/elm-http-builder": "2.0.0 <= v < 3.0.0"
+    },
+    "elm-version": "0.17.0 <= v < 0.18.0"
+}
