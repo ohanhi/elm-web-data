@@ -44,6 +44,11 @@ create catData =
     WebData.Http.postTask ReceiveCatData catDecoder catData "/api/cats/"
 ```
 
+There is a function to make a command or a task for each of the HTTP verbs.
+
+- Commands: `get`, `getWithCache`, `post`, `put`, `patch`, `delete`
+- Tasks: `getTask`, `getWithCacheTask`, `postTask`, `putTask`, `patchTask`, `deleteTask`
+
 
 # License
 
