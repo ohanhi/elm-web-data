@@ -5,7 +5,7 @@ module WebData exposing (WebData, fromResult)
 @docs WebData, fromResult
 -}
 
-import HttpBuilder exposing (Error)
+import Http
 
 
 {-| Type representing remote API data. A `Success` value contains the type that you
@@ -19,7 +19,7 @@ pattern.
 type WebData a
     = NotAsked
     | Loading
-    | Failure (Error String)
+    | Failure Http.Error
     | Success a
 
 
@@ -38,7 +38,7 @@ toMaybe state =
 
 {-| Convert a `Result Error` produced by HttpBuilder, to a `WebData` value.
 -}
-fromResult : Result (Error String) success -> WebData success
+fromResult : Result Http.Error success -> WebData success
 fromResult result =
     case result of
         Err e ->
