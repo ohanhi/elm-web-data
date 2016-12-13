@@ -1,10 +1,6 @@
 module WebData.Http
     exposing
-        ( WebDataCmd
-        , BodylessWebDataCmd
-        , WebDataTask
-        , BodylessWebDataTask
-        , get
+        ( get
         , getWithCache
         , post
         , put
@@ -17,229 +13,225 @@ module WebData.Http
         , patchTask
         , deleteTask
         , url
-        , asWebDataTask
-        , toCmd
         )
 
 {-| Friendly abstraction over remote API communication in JSON.
 
 # Commands
-@docs WebDataCmd, BodylessWebDataCmd
 @docs get, getWithCache, post, put, patch, delete
 
 # Tasks
-@docs WebDataTask, BodylessWebDataTask
 @docs getTask, getWithCacheTask, postTask, putTask, patchTask, deleteTask
 
 # Helpers
-@docs url, asWebDataTask, toCmd
+@docs url
 -}
 
-import Http
-import HttpBuilder exposing (..)
+import Http exposing (Header, Error, Response)
 import Task exposing (Task)
 import Json.Decode exposing (Decoder, Value)
 import WebData exposing (WebData)
 
 
-never : Never -> a
-never n =
-    never n
-
-
-{-| Typical signature for the `methodTask` functions. Takes a success decoder,
-a JSON value for body and the url, returning a task.
--}
-type alias WebDataTask success =
-    Decoder success -> Value -> String -> Task Never (WebData success)
-
-
-{-| Signature for a `methodTask` function without an HTTP body (namely, `getTask`).
-Takes a success decoder, and the url, returning a task.
--}
-type alias BodylessWebDataTask success =
-    Decoder success -> String -> Task Never (WebData success)
-
-
-{-| Signature for the `method` functions. Takes a "tagger", that can turn
-a `WebData success` into a component specific message, along with the `WebDataTask`
-arguments, returning a command.
--}
-type alias WebDataCmd success msg =
-    (WebData success -> msg) -> Decoder success -> Value -> String -> Cmd msg
-
-
-{-| Signature for a `method` function without an HTTP body (namely, `get`).
-Takes a "tagger", that can turn a `WebData success` into a component specific message,
-along with the `BodylessWebDataTask` arguments, returning a command.
--}
-type alias BodylessWebDataCmd success msg =
-    (WebData success -> msg) -> Decoder success -> String -> Cmd msg
-
-
-{-| Convert a `Task` produced by HttpBuilder, to a `Task Never (WebData s)`.
--}
-asWebDataTask : Task (Error String) (Response success) -> Task Never (WebData success)
-asWebDataTask =
-    Task.map .data >> Task.toResult >> Task.map WebData.fromResult
+noCache : Header
+noCache =
+    Http.header "Cache-Control" "no-store, must-revalidate, no-cache, max-age=0"
 
 
 {-| Convert an apiCall `Task` to a `Cmd msg` with the help of a
 tagger function (`WebData success -> msg`).
 -}
-toCmd : (WebData success -> msg) -> Task Never (WebData success) -> Cmd msg
-toCmd =
-    Task.perform never
+toCmd : (WebData success -> msg) -> Http.Request success -> Cmd msg
+toCmd tagger =
+    Http.send (tagger << WebData.fromResult)
 
 
-{-| Not to be exposed: a helper for turning a WebDataTask into a WebDataCmd.
--}
-taskFnToCmdFn : WebDataTask success -> WebDataCmd success msg
-taskFnToCmdFn taskFn tagger decoder body url =
-    taskFn decoder body url
-        |> toCmd tagger
+request :
+    String
+    -> List Header
+    -> String
+    -> Decoder success
+    -> Http.Body
+    -> Http.Request success
+request method headers url successDecoder body =
+    Http.request
+        { method = method
+        , headers = headers
+        , url = url
+        , body = body
+        , expect = Http.expectJson successDecoder
+        , timeout = Nothing
+        , withCredentials = False
+        }
 
 
-type HeaderSetting
-    = NoCache
-    | JustJson
-
-
-headers : HeaderSetting -> RequestBuilder -> RequestBuilder
-headers cacheSetting =
-    case cacheSetting of
-        NoCache ->
-            withHeaders
-                [ ( "content-type", "application/json" )
-                , ( "Cache-Control", "no-store, must-revalidate, no-cache, max-age=0" )
-                ]
-
-        _ ->
-            withHeader "content-type" "application/json"
+getRequest : List Header -> String -> Decoder success -> Http.Request success
+getRequest headers url decoder =
+    request "GET" headers url decoder Http.emptyBody
 
 
 {-| `GET` request as a task.
 Has a `no-cache` header to ensure data integrity.
 -}
-getTask : BodylessWebDataTask success
-getTask successDecoder url =
-    url
-        |> HttpBuilder.get
-        |> headers NoCache
-        |> send (jsonReader successDecoder) stringReader
-        |> asWebDataTask
+getTask : String -> Decoder success -> Task Error success
+getTask url decoder =
+    getRequest [ noCache ] url decoder
+        |> Http.toTask
 
 
 {-| `GET` request as a command.
 Has a `no-cache` header to ensure data integrity.
 -}
-get : BodylessWebDataCmd success msg
-get tagger decoder url =
-    getTask decoder url
+get : String -> (WebData success -> msg) -> Decoder success -> Cmd msg
+get url tagger decoder =
+    getRequest [ noCache ] url decoder
         |> toCmd tagger
 
 
 {-| `GET` request as a task, with cache. *NB.* allowing cache in API `GET` calls can lead
 to strange conditions.
 -}
-getWithCacheTask : BodylessWebDataTask success
-getWithCacheTask successDecoder url =
-    url
-        |> HttpBuilder.get
-        |> headers JustJson
-        |> send (jsonReader successDecoder) stringReader
-        |> asWebDataTask
+getWithCacheTask : String -> Decoder success -> Task Error success
+getWithCacheTask url decoder =
+    getRequest [] url decoder
+        |> Http.toTask
 
 
 {-| `GET` request as a command, with cache. *NB.* allowing cache in API `GET` calls can lead
 to strange conditions.
 -}
-getWithCache : BodylessWebDataCmd success msg
-getWithCache tagger decoder url =
-    getWithCacheTask decoder url
+getWithCache : String -> (WebData success -> msg) -> Decoder success -> Cmd msg
+getWithCache url tagger decoder =
+    getRequest [] url decoder
         |> toCmd tagger
 
 
 {-| `POST` request as a task.
 -}
-postTask : WebDataTask success
-postTask successDecoder body url =
-    url
-        |> HttpBuilder.post
-        |> headers JustJson
-        |> withJsonBody body
-        |> send (jsonReader successDecoder) stringReader
-        |> asWebDataTask
+postTask :
+    String
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Task Error success
+postTask url decoder body =
+    request "POST" [] url decoder (Http.jsonBody body)
+        |> Http.toTask
 
 
 {-| `POST` request as a command.
 -}
-post : WebDataCmd success msg
-post =
-    taskFnToCmdFn postTask
+post :
+    String
+    -> (WebData success -> msg)
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Cmd msg
+post url tagger decoder body =
+    request "POST" [] url decoder (Http.jsonBody body)
+        |> toCmd tagger
 
 
 {-| `PUT` request as a task.
 -}
-putTask : WebDataTask success
-putTask successDecoder body url =
-    url
-        |> HttpBuilder.put
-        |> headers JustJson
-        |> withJsonBody body
-        |> send (jsonReader successDecoder) stringReader
-        |> asWebDataTask
+putTask :
+    String
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Task Error success
+putTask url decoder body =
+    request "PUT" [] url decoder (Http.jsonBody body)
+        |> Http.toTask
 
 
 {-| `PUT` request as a command.
 -}
-put : WebDataCmd success msg
-put =
-    taskFnToCmdFn putTask
+put :
+    String
+    -> (WebData success -> msg)
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Cmd msg
+put url tagger decoder body =
+    request "PUT" [] url decoder (Http.jsonBody body)
+        |> toCmd tagger
 
 
 {-| `PATCH` request as a task.
 -}
-patchTask : WebDataTask success
-patchTask successDecoder body url =
-    url
-        |> HttpBuilder.patch
-        |> headers JustJson
-        |> withJsonBody body
-        |> send (jsonReader successDecoder) stringReader
-        |> asWebDataTask
+patchTask :
+    String
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Task Error success
+patchTask url decoder body =
+    request "PATCH" [] url decoder (Http.jsonBody body)
+        |> Http.toTask
 
 
 {-| `PATCH` request as a command.
 -}
-patch : WebDataCmd success msg
-patch =
-    taskFnToCmdFn patchTask
+patch :
+    String
+    -> (WebData success -> msg)
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Cmd msg
+patch url tagger decoder body =
+    request "PATCH" [] url decoder (Http.jsonBody body)
+        |> toCmd tagger
 
 
 {-| `DELETE` request as a task.
 -}
-deleteTask : WebDataTask success
-deleteTask successDecoder body url =
-    url
-        |> HttpBuilder.delete
-        |> headers JustJson
-        |> withJsonBody body
-        |> send (jsonReader successDecoder) stringReader
-        |> asWebDataTask
+deleteTask :
+    String
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Task Error success
+deleteTask url decoder body =
+    request "DELETE" [] url decoder (Http.jsonBody body)
+        |> Http.toTask
 
 
 {-| `DELETE` request as a command.
 -}
-delete : WebDataCmd success msg
-delete =
-    taskFnToCmdFn deleteTask
+delete :
+    String
+    -> (WebData success -> msg)
+    -> Decoder success
+    -> Json.Decode.Value
+    -> Cmd msg
+delete url tagger decoder body =
+    request "DELETE" [] url decoder (Http.jsonBody body)
+        |> toCmd tagger
 
 
-{-| Same as the elm-http `url` function, re-exposed for convenience.
-See documentation for
-[`Http.url`](http://package.elm-lang.org/packages/evancz/elm-http/latest/Http#url).
+{-| This is the old `url` function from evancz/elm-http.
+
+Create a properly encoded URL with a [query string][qs]. The first argument is
+the portion of the URL before the query string, which is assumed to be
+properly encoded already. The second argument is a list of all the
+key/value pairs needed for the query string. Both the keys and values
+will be appropriately encoded, so they can contain spaces, ampersands, etc.
+[qs]: http://en.wikipedia.org/wiki/Query_string
+    url "http://example.com/users" [ ("name", "john doe"), ("age", "30") ]
+    -- http://example.com/users?name=john+doe&age=30
 -}
 url : String -> List ( String, String ) -> String
-url =
-    Http.url
+url baseUrl args =
+    case args of
+        [] ->
+            baseUrl
+
+        _ ->
+            baseUrl ++ "?" ++ String.join "&" (List.map queryPair args)
+
+
+queryPair : ( String, String ) -> String
+queryPair ( key, value ) =
+    queryEscape key ++ "=" ++ queryEscape value
+
+
+queryEscape : String -> String
+queryEscape string =
+    String.join "+" (String.split "%20" (Http.encodeUri string))
