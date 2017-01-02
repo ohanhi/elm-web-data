@@ -1,5 +1,5 @@
 {
-    "version": "2.0.1",
+    "version": "2.0.2",
     "summary": "Opinionated wrapper for JSON API connections in Elm",
     "repository": "https://github.com/ohanhi/elm-web-data.git",
     "license": "BSD3",
