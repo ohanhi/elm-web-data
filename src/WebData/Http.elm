@@ -45,12 +45,13 @@ toCmd : (WebData success -> msg) -> Http.Request success -> Cmd msg
 toCmd tagger =
     Http.send (tagger << WebData.fromResult)
 
+
 toTask : Http.Request success -> Task Never (WebData success)
 toTask request =
-  request
-  |> Http.toTask
-  |> Task.map Success
-  |> Task.onError (Task.succeed << Failure)
+    request
+        |> Http.toTask
+        |> Task.map Success
+        |> Task.onError (Task.succeed << Failure)
 
 
 request :
@@ -88,6 +89,14 @@ getTask url decoder =
 
 {-| `GET` request as a command.
 Has a `no-cache` header to ensure data integrity.
+
+Example:
+
+    type Msg = HandleFetchDogs (WebData Dog) | -- ...
+
+    fetchDogs : Cmd Msg
+    fetchDogs =
+        get "/api/dogs.json" HandleFetchDogs Dog.listDecoder
 -}
 get : String -> (WebData success -> msg) -> Decoder success -> Cmd msg
 get url tagger decoder =
@@ -118,7 +127,7 @@ getWithCache url tagger decoder =
 postTask :
     String
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Task Never (WebData success)
 postTask url decoder body =
     request "POST" [] url decoder (Http.jsonBody body)
@@ -126,12 +135,21 @@ postTask url decoder body =
 
 
 {-| `POST` request as a command.
+
+Example:
+
+    type Msg = HandleAddDog (WebData Dog) | -- ...
+
+    addDog : Json.Encode.Value -> Cmd Msg
+    addDog dogBody =
+        post "/api/dogs.json" HandleAddDog Dog.decoder dogBody
+
 -}
 post :
     String
     -> (WebData success -> msg)
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Cmd msg
 post url tagger decoder body =
     request "POST" [] url decoder (Http.jsonBody body)
@@ -143,7 +161,7 @@ post url tagger decoder body =
 putTask :
     String
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Task Never (WebData success)
 putTask url decoder body =
     request "PUT" [] url decoder (Http.jsonBody body)
@@ -151,12 +169,20 @@ putTask url decoder body =
 
 
 {-| `PUT` request as a command.
+
+Example:
+
+    type Msg = HandleChangeDog (WebData Dog) | -- ...
+
+    changeDog : Id -> Json.Encode.Value -> Cmd Msg
+    changeDog dogId dogBody =
+        put ("/api/dogs/" ++ toString id) HandleChangeDog Dog.decoder dogBody
 -}
 put :
     String
     -> (WebData success -> msg)
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Cmd msg
 put url tagger decoder body =
     request "PUT" [] url decoder (Http.jsonBody body)
@@ -168,7 +194,7 @@ put url tagger decoder body =
 patchTask :
     String
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Task Never (WebData success)
 patchTask url decoder body =
     request "PATCH" [] url decoder (Http.jsonBody body)
@@ -176,12 +202,20 @@ patchTask url decoder body =
 
 
 {-| `PATCH` request as a command.
+
+Example:
+
+    type Msg = HandleUpdateDog (WebData Dog) | -- ...
+
+    updateDog : Id -> Json.Encode.Value -> Cmd Msg
+    updateDog dogId dogUpdates =
+        patch ("/api/dogs/" ++ toString dogId) HandleUpdateDog Dog.decoder dogUpdates
 -}
 patch :
     String
     -> (WebData success -> msg)
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Cmd msg
 patch url tagger decoder body =
     request "PATCH" [] url decoder (Http.jsonBody body)
@@ -193,7 +227,7 @@ patch url tagger decoder body =
 deleteTask :
     String
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Task Never (WebData success)
 deleteTask url decoder body =
     request "DELETE" [] url decoder (Http.jsonBody body)
@@ -201,12 +235,20 @@ deleteTask url decoder body =
 
 
 {-| `DELETE` request as a command.
+
+Example:
+
+    type Msg = HandleRemoveDog (WebData Bool) | -- ...
+
+    removeDog : Id -> Json.Encode.Value -> Cmd Msg
+    removeDog dogId  =
+        delete ("/api/dogs/" ++ toString dogId) HandleRemoveDog Json.Decode.bool
 -}
 delete :
     String
     -> (WebData success -> msg)
     -> Decoder success
-    -> Json.Decode.Value
+    -> Value
     -> Cmd msg
 delete url tagger decoder body =
     request "DELETE" [] url decoder (Http.jsonBody body)
