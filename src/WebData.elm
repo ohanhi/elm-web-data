@@ -1,4 +1,4 @@
-module WebData exposing (WebData, fromResult)
+module WebData exposing (WebData(..), fromResult)
 
 {-| Type representing remote API data.
 

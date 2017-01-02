@@ -33,15 +33,21 @@ type Msg
 
 fetchData : Int -> Cmd Msg
 fetchData catId =
-    WebData.Http.get ReceiveCatData catDecoder ("/api/cats/" ++ toString catId)
+    WebData.Http.get
+      ("/api/cats/" ++ toString catId)
+      catDecoder
+      ReceiveCatData
 ```
 
 Commands are usually what we need, but sometimes we need tasks for more fine-grained flow control. We can do that just as easily:
 
 ```elm
-create : Cat -> Task Never (WebData Cat)
+create : Cat -> Task Error (WebData Cat)
 create catData =
-    WebData.Http.postTask ReceiveCatData catDecoder (encode catData) "/api/cats/"
+    WebData.Http.postTask
+      "/api/cats/"
+      catDecoder
+      (encode catData)
 ```
 
 There is a function to make a command or a task for each of the HTTP verbs.

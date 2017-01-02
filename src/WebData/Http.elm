@@ -30,7 +30,7 @@ module WebData.Http
 import Http exposing (Header, Error, Response)
 import Task exposing (Task)
 import Json.Decode exposing (Decoder, Value)
-import WebData exposing (WebData)
+import WebData exposing (WebData(..))
 
 
 noCache : Header
@@ -44,6 +44,13 @@ tagger function (`WebData success -> msg`).
 toCmd : (WebData success -> msg) -> Http.Request success -> Cmd msg
 toCmd tagger =
     Http.send (tagger << WebData.fromResult)
+
+toTask : Http.Request success -> Task Never (WebData success)
+toTask request =
+  request
+  |> Http.toTask
+  |> Task.map Success
+  |> Task.onError (Task.succeed << Failure)
 
 
 request :
@@ -73,10 +80,10 @@ getRequest headers url decoder =
 {-| `GET` request as a task.
 Has a `no-cache` header to ensure data integrity.
 -}
-getTask : String -> Decoder success -> Task Error success
+getTask : String -> Decoder success -> Task Never (WebData success)
 getTask url decoder =
     getRequest [ noCache ] url decoder
-        |> Http.toTask
+        |> toTask
 
 
 {-| `GET` request as a command.
@@ -91,10 +98,10 @@ get url tagger decoder =
 {-| `GET` request as a task, with cache. *NB.* allowing cache in API `GET` calls can lead
 to strange conditions.
 -}
-getWithCacheTask : String -> Decoder success -> Task Error success
+getWithCacheTask : String -> Decoder success -> Task Never (WebData success)
 getWithCacheTask url decoder =
     getRequest [] url decoder
-        |> Http.toTask
+        |> toTask
 
 
 {-| `GET` request as a command, with cache. *NB.* allowing cache in API `GET` calls can lead
@@ -112,10 +119,10 @@ postTask :
     String
     -> Decoder success
     -> Json.Decode.Value
-    -> Task Error success
+    -> Task Never (WebData success)
 postTask url decoder body =
     request "POST" [] url decoder (Http.jsonBody body)
-        |> Http.toTask
+        |> toTask
 
 
 {-| `POST` request as a command.
@@ -137,10 +144,10 @@ putTask :
     String
     -> Decoder success
     -> Json.Decode.Value
-    -> Task Error success
+    -> Task Never (WebData success)
 putTask url decoder body =
     request "PUT" [] url decoder (Http.jsonBody body)
-        |> Http.toTask
+        |> toTask
 
 
 {-| `PUT` request as a command.
@@ -162,10 +169,10 @@ patchTask :
     String
     -> Decoder success
     -> Json.Decode.Value
-    -> Task Error success
+    -> Task Never (WebData success)
 patchTask url decoder body =
     request "PATCH" [] url decoder (Http.jsonBody body)
-        |> Http.toTask
+        |> toTask
 
 
 {-| `PATCH` request as a command.
@@ -187,10 +194,10 @@ deleteTask :
     String
     -> Decoder success
     -> Json.Decode.Value
-    -> Task Error success
+    -> Task Never (WebData success)
 deleteTask url decoder body =
     request "DELETE" [] url decoder (Http.jsonBody body)
-        |> Http.toTask
+        |> toTask
 
 
 {-| `DELETE` request as a command.
