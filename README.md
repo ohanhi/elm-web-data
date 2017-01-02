@@ -19,7 +19,7 @@ Hats off to Kris Jenkins for coining this pattern in [elm-exts](http://package.e
 
 ## Example usage
 
-Say we have a component called `Cat`, which requests some auxiliary data from the backend.
+Say we have a module called `Cat`, which requests some auxiliary data from the backend.
 Usually, we can define the command to do so just like this:
 
 
