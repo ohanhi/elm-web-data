@@ -1,6 +1,6 @@
 {
-    "version": "1.0.0",
-    "summary": "Opinionated wrapper for JSON API connections in Elm",
+    "version": "1.0.1",
+    "summary": "DEPRECATED in favor of `ohanhi/remotedata-http`",
     "repository": "https://github.com/ohanhi/elm-web-data.git",
     "license": "BSD3",
     "source-directories": [

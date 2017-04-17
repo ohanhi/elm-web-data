@@ -1,5 +1,9 @@
 # Elm Web Data
 
+DEPRECATED in favor of [`ohanhi/remotedata-http`](http://package.elm-lang.org/packages/ohanhi/remotedata-http/latest)
+
+---
+
 This package is intended as a quick and easy abstraction for dealing with backend data in Elm using the JSON format. As of now, there is very little configuration you can do.
 
 If you like the pattern but need to for example set some more request headers, don't be afraid to simply copy the source code into your project and modify it there. I am willing to introduce some configuration though, so if you have ideas, please post them in the [GitHub Issues](https://github.com/ohanhi/elm-web-data/issues).
